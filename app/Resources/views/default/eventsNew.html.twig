@@ -1,0 +1,305 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <style>
+        #searchBox{
+            border-right: solid black;
+            height: auto;
+        }
+
+        html{
+            height: 100%;
+        }
+
+        body{
+            min-height: 100%;
+        }
+        #body{
+            display: flex;
+            height: 100%;
+            min-height:100%;
+            width: 100%;
+        }
+
+    </style>
+
+    <link rel="alternate" type="text/xml+oembed" href="https://mdbootstrap.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fmdbootstrap.com%2Fjavascript%2Fdate-picker%2F&#038;format=xml" />
+    <link rel="alternate" type="application/json+oembed" href="https://mdbootstrap.com/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fmdbootstrap.com%2Fjavascript%2Fdate-picker%2F" />
+
+    <script>
+        $('.datepicker').pickadate();
+    </script>
+{% endblock %}
+
+{% block body %}
+    <div id="body">
+        <div class="row col-sm-2" style="min-height:100%;">
+            <div id="searchBox">
+                {{ form_start(form) }}
+                <div id="form" style="margin: 3%;">
+                    <div class="md-form">
+                        {{ form_widget(form.eventName,{'attr' : {'class':'form-control', 'placeholder':'Event Name'}}) }}
+                    </div>
+                    <div class="form-group" style="margin-right:2%"  >
+                        <label>{% trans into app.request.locale%}Category{% endtrans %}</label>
+                        {{ form_widget(form.category,{'attr' : {'class':'form-control browser-default custom-select mb-4'}})}}
+                    </div>
+                    <p></p>
+                    <div class="form-group" style="margin-right:2%" >
+                        <label>{% trans into app.request.locale%}From{% endtrans %}</label>
+                        {{form_widget(form.from) }}
+                    </div>
+                    <div class="form-group" style="margin-right:2%" >
+                        <label>{% trans into app.request.locale%}To{% endtrans %}</label>
+                        {{ form_widget(form.to) }}
+                    </div>
+
+                    <p></p>
+
+                    <div class="form-group" id = "submitButton" style="margin-right:1%">
+                        {{ form_widget(form.Search, {'attr' : {'class' : 'btn btn-primary'}}) }}
+                    </div>
+
+                    {{ form_widget(form.reset_form, {'attr' : {'class' : 'btn btn-primary'}}) }}
+
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-10">
+            <div class="row" id="eventsBox">
+                {% if events is defined %}
+                    {% for event in events %}
+                        <div class="col-sm-3" style="margin-top: 2%">
+                            <div class="card" style="width: 18rem;">
+                                <img class="card-img-top" alt="Image cap [100%x180]" style="height: 180px; width: 100%; display: block;" src="data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22286%22%20height%3D%22180%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20286%20180%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_163467548c8%20text%20%7B%20fill%3Argba(255%2C255%2C255%2C.75)%3Bfont-weight%3Anormal%3Bfont-family%3AHelvetica%2C%20monospace%3Bfont-size%3A14pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_163467548c8%22%3E%3Crect%20width%3D%22286%22%20height%3D%22180%22%20fill%3D%22%23777%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2299.38333511352539%22%20y%3D%2296.48000011444091%22%3EImage%20cap%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E" data-holder-rendered="true">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ event.event_name }}</h5>
+                                    <p class="card-text">{{ event.description }}</p>
+                                </div>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">{{ event.category_name }}</li>
+                                    <li class="list-group-item">{{ event.location }}</li>
+                                    <li class="list-group-item">{{ event.event_date|date("m/d/Y") }}</li>
+                                </ul>
+                                <div class="card-body" style="margin: 0 auto;">
+                                    <a href="{{ path('showEvent', {'page': page, 'eventID': event.event_id}) }}" class="card-link">Check Out</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="container" id="paginationDiv">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination" id="pagination"></ul>
+                </nav>
+            </div>
+
+        </div>
+
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+
+<script type="text/javascript">
+
+    $( document ).ready(function() {
+        $('#form_eventName').val('');
+        $('#form_category').val('');
+        $('#form_from').val('');
+        $('#form_to').val('');
+    });
+
+    $(function () {
+            var data = $("form").serializeArray();
+            obj = $('#pagination').twbsPagination({
+                totalPages: {{ countPages }},
+                visiblePages: 10,
+                onPageClick: function (event, page) {
+                    $.ajax({
+                        type : 'GET',
+                        data: {"page" : page, "data" : data},
+                        dataType: "json",
+                        url  : '{{ path('getEvents') }}',
+                        success: function(data){
+                            var events = '';
+                            console.log(data);
+                            console.log("hi");
+                            $.each(data, function(index, event) {
+                                console.log(event);
+
+                                events += "<div class='col-sm-3' style='margin-top: 2%' id='"+event.event_id+"'>";
+                                events += "<div class='card' style='width: 18rem;'>";
+                                events += "<img class='card-img-top' alt='Image cap [100%x180]' style='height: 180px; width: 100%; display: block;' src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22286%22%20height%3D%22180%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20286%20180%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_163467548c8%20text%20%7B%20fill%3Argba(255%2C255%2C255%2C.75)%3Bfont-weight%3Anormal%3Bfont-family%3AHelvetica%2C%20monospace%3Bfont-size%3A14pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_163467548c8%22%3E%3Crect%20width%3D%22286%22%20height%3D%22180%22%20fill%3D%22%23777%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2299.38333511352539%22%20y%3D%2296.48000011444091%22%3EImage%20cap%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E' data-holder-rendered='true'>";
+                                events += "<div class='card-body'>";
+                                events += "<h5 class='card-title'> " + event.event_name + "</h5>";
+                                events += "<p class='card-text'>" + event.description + "</p>";
+                                events += "</div>";
+                                events += "<ul class='list-group list-group-flush'>";
+                                events += "<li class='list-group-item'>" + event.category_name + "</li>";
+                                events += "<li class='list-group-item'>" + event.location + "</li>";
+                                events += "<li class='list-group-item'>" + event.event_date + "</li>";
+                                events += "</ul>";
+                                events += "<div class='card-body' style='margin: 0 auto;'>";
+                                events += "<div class='card-body' style='margin: 0 auto;'><span id='attendersEvent"+event.event_id+"'>"+event.attenders+ "</span>/" + event.max_attenders+"</div>";
+
+                                if(event.attended === 1){
+                                    events += "Attended";
+                                }else {
+                                    events += "<div id='"+event.event_id+"Link'><button onclick='attendEvent(1, "+event.event_id+")'> Attend Event </button></div>";
+                                }
+
+                                events += "</div>";
+                                events += "</div>";
+                                events += "</div>";
+                            });
+
+                            $("#eventsBox").html(events);
+                        }
+                    });
+                }
+            });
+            console.info(obj.data());
+        });
+
+    $('#submitButton').click(function(event){
+        event.preventDefault();
+        var page = 1;
+
+        var formData = $("form").serializeArray();
+
+        var eventsBox = document.getElementById("eventsBox");
+        eventsBox.style.display = "none";
+
+        divPagination = document.getElementById("paginationDiv");
+        divPagination.style.display = "none";
+
+        $.ajax({
+            type : 'GET',
+            data : {"page" : page, "data" : formData},
+            dataType : 'json',
+            url  : '{{ path('getEvents') }}',
+            success : function(data){
+                var events = '';
+
+                $.each(data, function(index, event) {
+                    events += "<div class='col-sm-3' style='margin-top: 2%' id='"+event.event_id+"'>";
+                    events += "<div class='card' style='width: 18rem;'>";
+                    events += "<img class='card-img-top' alt='Image cap [100%x180]' style='height: 180px; width: 100%; display: block;' src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22286%22%20height%3D%22180%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20286%20180%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_163467548c8%20text%20%7B%20fill%3Argba(255%2C255%2C255%2C.75)%3Bfont-weight%3Anormal%3Bfont-family%3AHelvetica%2C%20monospace%3Bfont-size%3A14pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_163467548c8%22%3E%3Crect%20width%3D%22286%22%20height%3D%22180%22%20fill%3D%22%23777%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2299.38333511352539%22%20y%3D%2296.48000011444091%22%3EImage%20cap%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E' data-holder-rendered='true'>";
+                    events += "<div class='card-body'>";
+                    events += "<h5 class='card-title'> " + event.event_name + "</h5>";
+                    events += "<p class='card-text'>" + event.description + "</p>";
+                    events += "</div>";
+                    events += "<ul class='list-group list-group-flush'>";
+                    events += "<li class='list-group-item'>" + event.category_name + "</li>";
+                    events += "<li class='list-group-item'>" + event.location + "</li>";
+                    events += "<li class='list-group-item'>" + event.event_date + "</li>";
+                    events += "</ul>";
+                    events += "<div class='card-body' style='margin: 0 auto;'>";
+                    events += "<div class='card-body' style='margin: 0 auto;'><span id='attendersEvent"+event.event_id+"'>"+event.attenders+ "</span>/" + event.max_attenders+"</div>";
+
+                    if(event.attended === 1){
+                        events += "Attended";
+                    }else {
+                        events += "<div id='"+event.event_id+"Link'><button onclick='attendEvent(1, "+event.event_id+")'> Attend Event </button></div>";
+                    }
+
+                    events += "</div>";
+                    events += "</div>";
+                    events += "</div>";
+                });
+
+                $("#eventsBox").html(events);
+                eventsBox.style.display = "block";
+            }
+        });
+
+        $.ajax({
+            type : 'GET',
+            data : {"data" : formData},
+            dataType : 'json',
+            url : '{{ path('getEventPages') }}',
+            success : function(data){
+                pagination = "<nav aria-label='Page navigation'>";
+                divPagination = document.getElementById("paginationDiv");
+                pagination += "<ul class='pagination' id='pagination'></ul>";
+                pagination += "</nav>";
+
+                divPagination.style.display = "block";
+
+                divPagination.innerHTML = pagination;
+
+                obj = $('#pagination').twbsPagination({
+                    totalPages: data,
+                    visiblePages: 10,
+                    onPageClick: function (event, page) {
+                        $.ajax({
+                            type : 'GET',
+                            data : {"page" : page, "data" : formData},
+                            dataType : 'json',
+                            url  : '{{ path('getEvents') }}',
+                            success : function(data){
+                                var events = '';
+
+                                $.each(data, function(index, event) {
+                                    events += "<div class='col-sm-3' style='margin-top: 2%' id='"+event.event_id+"'>";
+                                    events += "<div class='card' style='width: 18rem;'>";
+                                    events += "<img class='card-img-top' alt='Image cap [100%x180]' style='height: 180px; width: 100%; display: block;' src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22286%22%20height%3D%22180%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20286%20180%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3Cstyle%20type%3D%22text%2Fcss%22%3E%23holder_163467548c8%20text%20%7B%20fill%3Argba(255%2C255%2C255%2C.75)%3Bfont-weight%3Anormal%3Bfont-family%3AHelvetica%2C%20monospace%3Bfont-size%3A14pt%20%7D%20%3C%2Fstyle%3E%3C%2Fdefs%3E%3Cg%20id%3D%22holder_163467548c8%22%3E%3Crect%20width%3D%22286%22%20height%3D%22180%22%20fill%3D%22%23777%22%3E%3C%2Frect%3E%3Cg%3E%3Ctext%20x%3D%2299.38333511352539%22%20y%3D%2296.48000011444091%22%3EImage%20cap%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E' data-holder-rendered='true'>";
+                                    events += "<div class='card-body'>";
+                                    events += "<h5 class='card-title'> " + event.event_name + "</h5>";
+                                    events += "<p class='card-text'>" + event.description + "</p>";
+                                    events += "</div>";
+                                    events += "<ul class='list-group list-group-flush'>";
+                                    events += "<li class='list-group-item'>" + event.category_name + "</li>";
+                                    events += "<li class='list-group-item'>" + event.location + "</li>";
+                                    events += "<li class='list-group-item'>" + event.event_date + "</li>";
+                                    events += "</ul>";
+                                    events += "<div class='card-body' style='margin: 0 auto;'>";
+                                    events += "<div class='card-body' style='margin: 0 auto;'><span id='attendersEvent"+event.event_id+"'>"+event.attenders+ "</span>/" + event.max_attenders+"</div>";
+
+                                    if(event.attended === 1){
+                                        events += "Attended";
+                                    }else {
+                                        events += "<div id='"+event.event_id+"Link'><button onclick='attendEvent(1, "+event.event_id+")'> Attend Event </button></div>";
+                                    }
+
+                                    events += "</div>";
+                                    events += "</div>";
+                                    events += "</div>";
+                                });
+
+                                $("#eventsBox").html(events);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    function attendEvent(userId, eventId){
+        $.ajax({
+            type : 'POST',
+            data: {"userId": userId, "eventId": eventId},
+            url  : '{{ path('RegisterEvent') }}',
+            success: function (data) {
+              if(data){
+                  eventBoxLink = document.getElementById(eventId+"Link");
+                  eventBoxLink.innerHTML = "Attended";
+
+                  eventAttendersCounter = document.getElementById("attendersEvent"+eventId);
+
+                  counter = eventAttendersCounter.innerHTML;
+
+                  eventAttendersCounter.innerHTML = ++counter;
+              }
+            }
+        })
+    }
+</script>
+{% endblock %}
